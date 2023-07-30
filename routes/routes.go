@@ -10,6 +10,7 @@ func SetupRoutes() *mux.Router {
 
 	r.HandleFunc("/users", handlers.CreateUserHandler).Methods("POST")
 	r.HandleFunc("/users/{id}", handlers.GetUserHandler).Methods("GET")
+	r.HandleFunc("/users/{id}", handlers.DeleteUserHandler).Methods("DELETE")
 	r.HandleFunc("/users", handlers.GetAllUsersHandler).Methods("GET")
 
 	return r

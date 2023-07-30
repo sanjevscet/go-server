@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"scet.com/utils"
 )
 
 type User struct {
@@ -26,7 +26,7 @@ func CreateUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newUser.ID = uuid.New().String()
+	newUser.ID = utils.GetUUID()
 	newUser.CreatedAt = time.Now()
 	users = append(users, newUser)
 
@@ -47,6 +47,30 @@ func GetUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Error(w, "User not found", http.StatusNotFound)
+}
+
+func DeleteUserHandler(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	userID := params["id"]
+
+	var indexToRemove = -1
+	for i, user := range users {
+		if user.ID == userID {
+			indexToRemove = i
+			break
+		}
+	}
+
+	if indexToRemove == -1 {
+		http.Error(w, "Invalid user id", http.StatusNotFound)
+		return
+
+	}
+
+	users = append(users[:indexToRemove], users[indexToRemove+1:]...)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(users)
 }
 
 func GetAllUsersHandler(w http.ResponseWriter, r *http.Request) {
