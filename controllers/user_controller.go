@@ -7,7 +7,9 @@ import (
 	"time"
 
 	"github.com/go-playground/validator/v10"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
+	"scet.com/db"
 	"scet.com/myValidators"
 	"scet.com/structs"
 	"scet.com/utils"
@@ -85,6 +87,52 @@ func DeleteUserHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetAllUsersHandler(w http.ResponseWriter, r *http.Request) {
+	query := "SELECT id, first_name, last_name, email, created_at FROM go_users"
+
+	db, err := db.ConnectDB()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer db.Close()
+
+	// Execute the SQL query
+	rows, err := db.Query(query)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	// Create a slice to store the users
+	var users []structs.User
+
+	// Iterate through the rows and scan the data into User structs
+	for rows.Next() {
+		var user structs.User
+		var createdAt []uint8 // Temporary variable to store created_at as []uint8
+		err := rows.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &createdAt)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Parse createdAt ([]uint8) into time.Time
+		user.CreatedAt, err = time.Parse("2006-01-02 15:04:05", string(createdAt))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		users = append(users, user)
+	}
+
+	// Check for any errors during row iteration
+	err = rows.Err()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(users)
 }
