@@ -1,8 +1,10 @@
 package controllers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -47,15 +49,44 @@ func GetUserHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	userID := params["id"]
 
-	for _, user := range users {
-		if user.ID == userID {
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(user)
-			return
-		}
+	if userID == "" {
+		http.Error(w, "UserId not passed", http.StatusBadRequest)
+		return
 	}
 
-	http.Error(w, "User not found", http.StatusNotFound)
+	query := "SELECT id, first_name, last_name, email, created_at FROM go_users where id = ?"
+	log.Println("query: ", query)
+
+	db, err := db.ConnectDB()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer db.Close()
+
+	var user structs.User
+	var createdAt []uint8 // Temporary variable to store created_at as []uint8
+
+	err = db.QueryRow(query, userID).Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &createdAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "User not found", http.StatusNotFound)
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Parse createdAt ([]uint8) into time.Time
+	user.CreatedAt, err = time.Parse("2006-01-02 15:04:05", string(createdAt))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Convert the user struct to JSON and send the response
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(user)
 }
 
 func DeleteUserHandler(w http.ResponseWriter, r *http.Request) {
