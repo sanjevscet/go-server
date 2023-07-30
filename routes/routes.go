@@ -2,16 +2,16 @@ package routes
 
 import (
 	"github.com/gorilla/mux"
-	"scet.com/handlers"
+	"scet.com/controllers"
 )
 
 func SetupRoutes() *mux.Router {
 	r := mux.NewRouter()
 
-	r.HandleFunc("/users", handlers.CreateUserHandler).Methods("POST")
-	r.HandleFunc("/users/{id}", handlers.GetUserHandler).Methods("GET")
-	r.HandleFunc("/users/{id}", handlers.DeleteUserHandler).Methods("DELETE")
-	r.HandleFunc("/users", handlers.GetAllUsersHandler).Methods("GET")
+	r.HandleFunc("/users", controllers.CreateUserHandler).Methods("POST")
+	r.HandleFunc("/users/{id}", controllers.GetUserHandler).Methods("GET")
+	r.HandleFunc("/users/{id}", controllers.DeleteUserHandler).Methods("DELETE")
+	r.HandleFunc("/users", controllers.GetAllUsersHandler).Methods("GET")
 
 	return r
 }
