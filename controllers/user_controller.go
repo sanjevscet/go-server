@@ -55,7 +55,6 @@ func GetUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	query := "SELECT id, first_name, last_name, email, created_at FROM go_users where id = ?"
-	log.Println("query: ", query)
 
 	db, err := db.ConnectDB()
 	if err != nil {
@@ -93,22 +92,39 @@ func DeleteUserHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	userID := params["id"]
 
-	var indexToRemove = -1
-	for i, user := range users {
-		if user.ID == userID {
-			indexToRemove = i
-			break
-		}
-	}
-
-	if indexToRemove == -1 {
-		http.Error(w, "Invalid user id", http.StatusNotFound)
+	if userID == "" {
+		http.Error(w, "UserId not passed", http.StatusBadRequest)
 		return
-
 	}
 
-	users = append(users[:indexToRemove], users[indexToRemove+1:]...)
+	query := "DELETE from go_users where id = ?"
+	// Log the executed query
+	log.Printf("Executing query: %s with userID: %s\n", query, userID)
 
+	db, err := db.ConnectDB()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer db.Close()
+
+	// Execute the DELETE query
+	result, err := db.Exec(query, userID)
+	if err != nil {
+		log.Fatal("Error executing the DELETE query: ", err)
+	}
+
+	// Check the number of rows affected by the DELETE operation
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Fatal("Error getting the number of rows affected: ", err)
+	}
+
+	fmt.Printf("%d row(s) deleted.\n", rowsAffected)
+	if rowsAffected == 0 {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	response := structs.DeleteUserResponse{
 		Success: true,
